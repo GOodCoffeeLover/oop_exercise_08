@@ -45,9 +45,13 @@ work_type get_num(){
 		throw std::logic_error("wrong input");
 }
 
-int main(){
+int main(int argc, char* argv[]){
+	if(argc!=2){
+		std::cout<<"wrong usage"<<std::endl;
+		return 0;
+	}
 	print_menu();
-	Redactor<work_type> redactor;
+	Redactor<work_type> redactor(atoi(argv[1]));
 	while(true){
 	try{
 	std::cout<<">>"<<std::flush;

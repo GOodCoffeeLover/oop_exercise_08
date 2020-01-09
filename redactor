@@ -80,7 +80,6 @@ public:
 		New();
 		std::size_t size=0;
 		file.read((char*)&size, sizeof(size));
-		std::cout<<"read size = "<<size<<std::endl;
 		for(int i=0; i<size; ++i){
 			int type;
 			T ar[4];
@@ -120,9 +119,7 @@ public:
 			
 			}
 		}
-		std::cout<<"exit from cicle in load"<<std::endl;
 		file.close();
-		std::cout<<"exit from load"<<std::endl;
 	}
 	void insert(unsigned long long pos, const std::vector<std::pair<T, T>>& points){
 		if(pos>figures.size())
@@ -135,11 +132,13 @@ public:
 			std::ofstream file("export_file.txt");		 
 			std::vector<std::shared_ptr<Figure<T>>> vec (figures);
 			std::thread main_action( [&vec, &file](){
-				for(std::shared_ptr<Figure<T>> el :vec){
-					el->print(std::cout);
-					std::cout<<"==========="<<std::endl;
-					el->print(file);
-					file<<"==========="<<std::endl;
+				for(int i=0; i<vec.size(); ++i){
+					vec[i]->print(std::cout);
+					vec[i]->print(file);
+					if(i<vec.size()-1){
+						std::cout<<"==========="<<std::endl;
+						file<<"==========="<<std::endl;
+					}
 				}
 			});
 			main_action.join();
