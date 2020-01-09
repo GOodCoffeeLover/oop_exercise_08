@@ -1,0 +1,205 @@
+#pragma once
+#include<iostream>
+#include<cmath>
+#include<exception>
+#include<vector>
+#include<tuple>
+template <class T> 
+double length(std::pair<T, T> p1, std::pair<T, T> p2){
+			return sqrt((p2.first-p1.first)*(p2.first-p1.first) + (p2.second-p1.second)*(p2.second-p1.second));				
+}
+
+template <class T>
+double cos(std::pair<T, T> p1, std::pair<T, T> p2, std::pair<T, T> p3, std::pair<T, T> p4){
+			return  ( (p2.first-p1.first) * (p4.first-p3.first) 
+				+ (p2.second-p1.second) * (p4.second-p3.second) )
+				/ ( length(p1, p2) * length( p3, p4) ); 
+}
+
+template <class T>
+std::ostream& operator <<(std::ostream &o, const std::pair<T, T>& a){
+	o<<"( "<<a.first<<" , "<<a.second<<" )";
+	return o;
+}
+
+template <class T>
+std::ostream& operator <<(std::ostream &o, const std::pair<T, T>&& a){
+	o<<"( "<<a.first<<" , "<<a.second<<" )";
+	return o;
+}
+template <class T>
+std::ostream& operator <<(std::ostream &o, std::pair<T, T>& a){
+	o<<"( "<<a.first<<" , "<<a.second<<" )";
+	return o;
+}
+
+template <class T>
+std::ostream& operator <<(std::ostream &o, std::pair<T, T>&& a){
+	o<<"( "<<a.first<<" , "<<a.second<<" )";
+	return o;
+}
+
+template<class T>
+class Figure{
+protected:
+	using type = T;
+	using vertex = std::pair<type, type>;
+	using vertexes = std::vector<vertex>;
+	vertexes points;
+	int figure_type=0;
+	double squar=0;
+	vertex centr{0,0};
+public:
+	void print(std::ostream &o){
+		switch(figure_type){
+			case 0:
+				throw std::logic_error("Figure is not created");
+			case 1:
+				o<<"Figure - Square"<<std::endl;
+				break;
+			case 2:
+				o<<"Figure - Rectangle"<<std::endl;
+				break;
+			case 3:
+				o<<"Figure - Trapeze"<<std::endl;
+				break;
+			default:
+				throw std::logic_error("Figure type is unknown");
+		}
+		o<<"vertexes: "<<std::endl;
+		for(const vertex& ver: points)
+			o<<'\t'<<ver<<std::endl;
+		o<<"square = "<<squar<<std::endl;
+		o<<"center = "<<centr<<std::endl;
+	}
+	double square(){
+		return squar;
+	}
+	vertex center(){
+		return centr;
+	}
+	int get_type(){
+		return figure_type;
+	}
+	vertexes get_vertex(){
+		return points;
+	}
+};
+
+template <class T>
+class Square: public Figure<T>{
+public:
+	using typename Figure<T>::type;
+	using typename Figure<T>::vertex;
+	using typename Figure<T>::vertexes; 
+	
+	using Figure<T>::squar;
+	using Figure<T>::centr;
+	using Figure<T>::points;
+	using Figure<T>::figure_type;
+	Square(const vertexes& p){
+		if( (p.size() == 2) && 
+			(p[0].first!=p[1].first) || (p[0].second!=p[1].second) ){
+			points = vertexes{
+				p[0], 
+				vertex{
+					-p[1].second + (p[1].second + p[0].second + p[1].first + p[0].first)/2, 
+					p[1].first + (p[1].second + p[0].second - p[1].first - p[0].first)/2
+				}, 
+				p[1], 
+				vertex{
+					p[1].second + (p[1].first + p[0].first - p[1].second - p[0].second)/2, 
+					-p[1].first + (p[1].second + p[0].second + p[1].first + p[0].first)/2
+				}
+			};
+			std::pair<T, T> c {
+				-p[1].second + (p[1].second + p[0].second + p[1].first + p[0].first)/2, 
+				p[1].first + (p[1].second + p[0].second - p[1].first - p[0].first)/2
+			};
+			squar = (double) length( p[0] , c ) 
+			 * length( p[1] , c );
+			centr = std::pair{
+				( p[0].first  + p[1].first  ) / 2, 
+				( p[0].second + p[1].second ) / 2 
+			};
+			figure_type=1;
+		}else
+			throw std::logic_error("it's not a square");
+	}
+};
+
+template <class T>
+class Rectangle: public Figure<T>{
+public:
+	using typename Figure<T>::type;
+	using typename Figure<T>::vertex;
+	using typename Figure<T>::vertexes; 
+
+	using Figure<T>::squar;
+	using Figure<T>::centr;
+	using Figure<T>::points;
+	using Figure<T>::figure_type;
+	
+	Rectangle(const vertexes& p){
+		if( (p.size()==3) &&
+		 (p[0].first!=p[1].first || p[0].second!=p[1].second)
+		 && (p[2].first!=p[1].first || p[2].second!=p[1].second)
+		 && (p[0].first!=p[2].first || p[0].second!=p[2].second) 
+		 && (cos(p[0], p[1], p[1], p[2])<=1e-9 && cos(p[0], p[1], p[1], p[2])>=-1e-9) ) {
+			points=std::vector{p[0], p[1], p[2], std::pair<T, T>{
+				p[2].first-p[1].first+p[0].first,
+				p[2].second-p[1].second+p[0].second
+				}
+			};
+			
+			squar=(double) length( p[0], p[1] ) 
+						 * length( p[1], p[2] );
+			centr=std::pair{
+				( p[0].first  + p[2].first  ) / 2, 
+				( p[0].second + p[2].second ) / 2 
+			};
+			
+			figure_type=2;
+		}else
+			throw std::logic_error("it's not a rectangle");
+	}
+};
+
+template <class T>
+class Trapeze: public Figure<T>{
+public:
+	using typename Figure<T>::type;
+	using typename Figure<T>::vertex;
+	using typename Figure<T>::vertexes; 
+	
+	using Figure<T>::squar;
+	using Figure<T>::centr;
+	using Figure<T>::points;
+	using Figure<T>::figure_type;
+	
+	Trapeze(const vertexes& p){
+		if( p.size()==4 &&
+		(( length(p[0], p[1]) - length(p[2], p[3])<=1e-9) && ( length(p[0], p[1]) - length(p[2], p[3])>=-1e-9 ) )
+		&&!( (length(p[0], p[1]) <= 1e-9) && (length(p[0], p[1]) >= -1e-9) ) 
+		&& ( ( (cos(p[0], p[3], p[2], p[1]) <= 1+1e-9) && (cos(p[0], p[3], p[2], p[1]) >= 1-1e-9) ) 
+		   || ( (cos(p[0], p[3], p[2], p[1])<=-1+1e-9) && (cos(p[0], p[3], p[2], p[1])>=-1-1e-9) ) ) 
+		) {
+			points=p;
+			squar = (double)
+			(length(p[0], p[3])+length(p[1], p[2]))/2
+			* length(p[1], std::pair<T, T> {
+				p[0].first + ( length(p[0], p[3]) - length(p[1], p[2]) ) / 2 
+				* ( length(p[0], std::pair{ p[3].first, p[0].second} ) / length(p[0], p[3]) ),
+				p[0].second + ( length(p[0], p[3])-length(p[1], p[2]) )/2
+				* ( length(p[3], std::pair{p[3].first, p[0].second}) / length(p[0], p[3]) ) 
+				}
+			  );
+			  centr = std::pair{
+					( p[0].first  + p[1].first  + p[2].first  + p[3].first  ) / 4, 
+					( p[0].second + p[1].second + p[2].second + p[3].second ) / 4 
+				};
+			figure_type=3;
+		}else
+			throw std::logic_error("it's not a trapeze");
+	}
+};

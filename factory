@@ -1,0 +1,19 @@
+#pragma once
+
+#include<memory>
+#include "figures"
+
+template<class T> class Factory{
+public:
+	static std::shared_ptr<Figure<T>> create(const std::vector<std::pair<T, T>>& points){
+		switch(points.size()){
+			case 2:
+				return std::shared_ptr<Figure<T>>(new Square<T>(points));
+			case 3:
+				return std::shared_ptr<Figure<T>>(new Rectangle<T>(points));
+			case 4: 
+				return std::shared_ptr<Figure<T>>(new Trapeze<T>(points));
+		}
+		return 0;
+	}
+}; 

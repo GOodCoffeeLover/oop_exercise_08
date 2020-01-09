@@ -1,0 +1,229 @@
+#pragma once
+#include<string>
+#include<fstream>
+#include<exception>
+#include<deque>
+#include<vector>
+#include<memory>
+#include<thread>
+#include"factory"
+#include"figures"
+
+template<class T>
+class Redactor{
+private:
+	class Action{
+		public:
+		Action(bool c, unsigned long long p, std::shared_ptr<Figure<T>> o_p): cmd(c), pos(p), obj_ptr(o_p) {}
+		bool cmd; //insert = true ; remove = false
+		std::shared_ptr<Figure<T>> obj_ptr;
+		unsigned long long pos;
+	};
+	int max_size=10;
+	std::deque<Action> done, canceled; 
+	std::vector<std::shared_ptr<Figure<T>>> figures;
+public:
+	Redactor(){}
+	Redactor(int size): max_size(size){}
+	void New(){
+		done.clear();
+		canceled.clear();
+		figures.clear();
+		return;
+	}
+	void save(const std::string& file_name){
+		std::ofstream file(file_name, std::ios::binary);
+		if(!file.good())
+			throw std::runtime_error("can't open file");
+		std::size_t size=figures.size();
+		file.write((char*) &size, sizeof(size));
+		for(std::shared_ptr<Figure<T>>& elem : figures){
+			int type=elem->get_type();
+			file.write((char*) &type, sizeof(type));
+			std::vector<std::pair<T, T>> points=elem->get_vertex();
+			switch(type){
+				case 1:{
+					file.write((char*) &(points[0].first), sizeof(points[0].first));
+					file.write((char*) &(points[0].second), sizeof(points[0].second));
+					file.write((char*) &(points[2].first), sizeof(points[2].first));
+					file.write((char*) &(points[2].second), sizeof(points[2].second));
+					break;
+				}
+				case 2:{
+					file.write((char*) &(points[0].first), sizeof(points[0].first));
+					file.write((char*) &(points[0].second), sizeof(points[0].second));
+					file.write((char*) &(points[1].first), sizeof(points[1].first));
+					file.write((char*) &(points[1].second), sizeof(points[1].second));
+					file.write((char*) &(points[2].first), sizeof(points[2].first));
+					file.write((char*) &(points[2].second), sizeof(points[2].second));
+					break;
+				}
+				case 3:{
+					file.write((char*) &(points[0].first), sizeof(points[0].first));
+					file.write((char*) &(points[0].second), sizeof(points[0].second));
+					file.write((char*) &(points[1].first), sizeof(points[1].first));
+					file.write((char*) &(points[1].second), sizeof(points[1].second));
+					file.write((char*) &(points[2].first), sizeof(points[2].first));
+					file.write((char*) &(points[2].second), sizeof(points[2].second));
+					file.write((char*) &(points[3].first), sizeof(points[3].first));
+					file.write((char*) &(points[3].second), sizeof(points[3].second));
+					break;
+				}
+			}
+		}
+		file.close();
+	}
+	void load(const std::string& file_name){
+		std::ifstream file(file_name, std::ios::binary);
+		if(!file.good())
+			throw std::runtime_error("can't open file");
+		New();
+		std::size_t size=0;
+		file.read((char*)&size, sizeof(size));
+		std::cout<<"read size = "<<size<<std::endl;
+		for(int i=0; i<size; ++i){
+			int type;
+			T ar[4];
+			file.read((char*)&type, sizeof(type));
+			switch(type){
+				case 1:{
+					file.read((char*)&ar, sizeof(T)*4);
+					 std::vector<std::pair<T, T>>buf{
+							std::pair<T, T>{ar[0], ar[1]},
+							std::pair<T, T>{ar[2], ar[3]}
+						
+					}	;
+					figures.push_back( Factory<T>::create(buf));
+					break;
+				}
+				case 2:{
+					file.read((char*)&ar, sizeof(T)*6);
+					 std::vector<std::pair<T, T>>buf{
+							std::pair<T, T>{ar[0], ar[1]},
+							std::pair<T, T>{ar[2], ar[3]},
+							std::pair<T, T>{ar[4], ar[5]}
+						};
+					figures.push_back( Factory<T>::create(buf));
+					break;
+				}
+				case 3:{
+					file.read((char*)&ar, sizeof(T)*8);
+					std::vector<std::pair<T, T>>buf{
+							std::pair<T, T>{ar[0], ar[1]},
+							std::pair<T, T>{ar[2], ar[3]},
+							std::pair<T, T>{ar[4], ar[5]},
+							std::pair<T, T>{ar[6], ar[7]}
+						};
+					figures.push_back( Factory<T>::create( buf));
+					break;
+				}
+			
+			}
+		}
+		std::cout<<"exit from cicle in load"<<std::endl;
+		file.close();
+		std::cout<<"exit from load"<<std::endl;
+	}
+	void insert(unsigned long long pos, const std::vector<std::pair<T, T>>& points){
+		if(pos>figures.size())
+			throw std::logic_error("Position for inserting figure is too big");
+		canceled.clear();
+		figures.insert(std::next(figures.begin(), pos) , Factory<T>::create(points));
+		if(figures.size()==max_size){
+			std::cout<<"Export begin"<<std::endl
+					 <<"==============================="<<std::endl;
+			std::ofstream file("export_file.txt");		 
+			std::vector<std::shared_ptr<Figure<T>>> vec (figures);
+			std::thread main_action( [&vec, &file](){
+				for(std::shared_ptr<Figure<T>> el :vec){
+					el->print(std::cout);
+					std::cout<<"==========="<<std::endl;
+					el->print(file);
+					file<<"==========="<<std::endl;
+				}
+			});
+			main_action.join();
+			std::cout<<"==============================="<<std::endl
+					 <<"Export end"<<std::endl;
+			New();
+			return;
+		}
+		done.push_back(Action{true, pos, figures[pos]});
+		return;
+	}
+	void remove(unsigned long long pos){
+		if(pos>figures.size())
+			throw std::logic_error("Position for removing figure is too big");
+		canceled.clear();
+		done.push_back(Action{false, pos, figures[pos]});
+		figures.erase(std::next(figures.begin(), pos));
+		return;
+	}
+	void undo(){
+		if(done.empty())
+			throw std::logic_error("No action to undo");
+		Action cur=done.back();
+		done.pop_back();
+		if(cur.cmd){
+			figures.erase(std::next(figures.begin(), cur.pos));
+			std::cout<<"Removed figure from pos "<<cur.pos<<std::endl;
+		}else{
+			figures.insert(std::next(figures.begin(), cur.pos) , cur.obj_ptr);
+			std::cout<<"Insert figure in pos "<<cur.pos<<std::endl;
+		}
+		canceled.push_back(Action{!cur.cmd, cur.pos, cur.obj_ptr});
+	}
+	void redo(){
+		if(canceled.empty())
+			throw std::logic_error("No action to redo");
+		Action cur=canceled.back();
+		canceled.pop_back();
+		if(cur.cmd){
+			std::cout<<"Removed figure from pos "<<cur.pos<<std::endl;
+			figures.erase(std::next(figures.begin(), cur.pos));
+		}else{
+			std::cout<<"Insert figure in pos "<<cur.pos<<std::endl;
+			figures.insert(std::next(figures.begin(), cur.pos) , cur.obj_ptr);
+		}
+		done.push_back(Action{(!cur.cmd), cur.pos, cur.obj_ptr});
+	}
+	void do_for_one(unsigned long long pos, int cmd){
+		if(pos>figures.size())
+			throw std::logic_error("Figure position for action is too big");
+		switch(cmd){
+			case 0:
+				std::cout<<"figure "<<pos<<" has square = "<<figures[pos]->square()<<std::endl;
+				break;
+			case 1:
+				std::cout<<"figure "<<pos<<" has center = "<<figures[pos]->center()<<std::endl;
+				break;
+			case 2:
+				figures[pos]->print(std::cout);
+				break;
+			default:
+				throw std::logic_error("Wrong command for action");
+		}
+	}
+	
+	void do_for_all(int cmd){
+		if(figures.size()==0)
+			throw std::logic_error("buffer of figures empty");
+		switch(cmd){
+			case 0:
+				for(unsigned long long pos=0; pos<figures.size(); ++pos)
+					std::cout<<"figure "<<pos+1<<" has square = "<<figures[pos]->square()<<std::endl;
+				break;
+			case 1:
+				for(unsigned long long pos=0; pos<figures.size(); ++pos)
+					std::cout<<"figure "<<pos+1<<" has center = "<<figures[pos]->center()<<std::endl;
+				break;
+			case 2:
+				for(unsigned long long pos=0; pos<figures.size(); ++pos){
+					std::cout<<pos+1<<". "; figures[pos]->print(std::cout);
+				}
+				break;
+			default:
+				throw std::logic_error("Wrong command for action");
+		}
+	}
+};
