@@ -4,6 +4,14 @@
 #include "factory"
 #include "redactor"
 
+/*
+Трофимов М.А
+вариант 10
+редактор фигур: 
+квадрат прямоугольник трапеция
+*/
+
+
 void print_menu(){
 	std::cout
 	<<"1. Print menu"<<std::endl
